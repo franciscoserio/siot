@@ -5,7 +5,10 @@ import (
 	"net/http"
 
 	"siot/api/auth"
+	"siot/api/models"
 	"siot/api/responses"
+
+	"github.com/jinzhu/gorm"
 )
 
 func SetMiddlewareJSON(next http.HandlerFunc) http.HandlerFunc {
@@ -28,12 +31,24 @@ func SetMiddlewareAuthentication(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func SetMiddlewareIsAdmin(next http.HandlerFunc) http.HandlerFunc {
+func SetMiddlewareIsSuperAdmin(db *gorm.DB, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		is_valid := auth.ExtractIsAdmin(r)
-		if !is_valid {
-			responses.ERROR(w, http.StatusUnauthorized, errors.New("only admin users have access to this endpoint"))
+		user_id, err := auth.ExtractTokenID(r)
+		if err != nil {
+			responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
+			return
+		}
+
+		user := models.User{}
+		u, err := user.FindUserByID(db, user_id)
+		if err != nil {
+			responses.ERROR(w, http.StatusNotFound, errors.New("user not found"))
+			return
+		}
+
+		if !u.IsSuperAdmin {
+			responses.ERROR(w, http.StatusNotFound, errors.New("only super admin users can access this endpoint"))
 			return
 		}
 

@@ -25,6 +25,7 @@ type User struct {
 	Email           string    `validate:"email,required" gorm:"size:100;not null;unique" json:"email"`
 	Password        string    `validate:"required" gorm:"size:100;not null;" json:"password"`
 	IsAdmin         bool      `gorm:"default:true"`
+	IsSuperAdmin    bool      `gorm:"default:false"`
 	Status          string    `gorm:"size:255;default:'active'"`
 	InvitationToken string    `gorm:"size:255;"`
 	CreatedAt       time.Time `validate:"required" gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
@@ -53,12 +54,12 @@ func VerifyPassword(hashedPassword, password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func (u *User) BeforeSave() error {
-	u.Status = "invited"
-	u.InvitationToken = randStr(30)
-	u.Password = ""
-	return nil
-}
+// func (u *User) BeforeSave() error {
+// 	u.Status = "invited"
+// 	u.InvitationToken = randStr(30)
+// 	u.Password = ""
+// 	return nil
+// }
 
 func (u *User) Prepare() {
 	u.FirstName = html.EscapeString(strings.TrimSpace(u.FirstName))
@@ -116,7 +117,7 @@ func (u *User) Validate(action string) []string {
 	}
 }
 
-func (u *User) UserValidations(action string) formaterror.GeneralError {
+func (u *User) UserValidations(action string, db *gorm.DB) formaterror.GeneralError {
 
 	var errors formaterror.GeneralError
 
@@ -126,6 +127,9 @@ func (u *User) UserValidations(action string) formaterror.GeneralError {
 		if u.Password == "" {
 			errors.Errors = append(errors.Errors, "password is required")
 		}
+		if len(u.Password) < 5 {
+			errors.Errors = append(errors.Errors, "password must have at least 5 characters")
+		}
 
 		return errors
 
@@ -133,18 +137,67 @@ func (u *User) UserValidations(action string) formaterror.GeneralError {
 		if u.FirstName == "" {
 			errors.Errors = append(errors.Errors, "first name is required")
 		}
-		if u.Password == "" {
-			errors.Errors = append(errors.Errors, "password is required")
+		if len(u.FirstName) > 255 {
+			errors.Errors = append(errors.Errors, "first name is too long")
+		}
+		if u.LastName == "" {
+			errors.Errors = append(errors.Errors, "last name is required")
+		}
+		if len(u.LastName) > 255 {
+			errors.Errors = append(errors.Errors, "last name is too long")
 		}
 		if u.Email == "" {
 			errors.Errors = append(errors.Errors, "email is required")
 		}
+		if len(u.Email) > 100 {
+			errors.Errors = append(errors.Errors, "email is too long")
+		}
 		if err := checkmail.ValidateFormat(u.Email); err != nil {
 			errors.Errors = append(errors.Errors, "invalid email")
 		}
-
+		if EmailAlreadyExists(db, u.Email) {
+			errors.Errors = append(errors.Errors, "an account with this email already exists")
+		}
 		return errors
 	}
+}
+
+func EmailAlreadyExists(db *gorm.DB, email string) bool {
+
+	var users []User
+	db.Model(User{}).Where("email = ?", email).Find(&users)
+	return len(users) > 0
+}
+
+func (u *User) CreateSuperAdminUser(db *gorm.DB) bool {
+
+	// get super admin email
+	var superAdminEmail string = os.Getenv("SUPER_ADMIN_EMAIL")
+	if err := checkmail.ValidateFormat(superAdminEmail); err != nil {
+		log.Fatalln("invalid super admin email")
+		return false
+	}
+
+	// super admin password
+	hashedPassword, _ := Hash("admin")
+	var stringHashedPassword = string(hashedPassword)
+
+	u.FirstName = "admin"
+	u.LastName = "admin"
+	u.Email = superAdminEmail
+	u.Password = stringHashedPassword
+	u.IsSuperAdmin = true
+
+	// check if super admin user was already created
+	var users []User
+	db.Model(User{}).Where("is_super_admin = ?", true).Find(&users)
+	if len(users) > 0 {
+		return false
+	}
+
+	// create super admin user
+	db.Create(&u)
+	return true
 }
 
 func (u *User) SaveUser(db *gorm.DB) (*User, error) {
@@ -225,31 +278,31 @@ func (u *User) FindUserByID(db *gorm.DB, uid string) (*User, error) {
 	return u, err
 }
 
-func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
+// func (u *User) UpdateAUser(db *gorm.DB, uid uint32) (*User, error) {
 
-	// To hash the password
-	err := u.BeforeSave()
-	if err != nil {
-		log.Fatal(err)
-	}
-	db = db.Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
-		map[string]interface{}{
-			"password":   u.Password,
-			"first_name": u.FirstName,
-			"email":      u.Email,
-			"updated_at": time.Now(),
-		},
-	)
-	if db.Error != nil {
-		return &User{}, db.Error
-	}
-	// This is the display the updated user
-	err = db.Model(&User{}).Where("id = ?", uid).Take(&u).Error
-	if err != nil {
-		return &User{}, err
-	}
-	return u, nil
-}
+// 	// To hash the password
+// 	err := u.BeforeSave()
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	db = db.Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
+// 		map[string]interface{}{
+// 			"password":   u.Password,
+// 			"first_name": u.FirstName,
+// 			"email":      u.Email,
+// 			"updated_at": time.Now(),
+// 		},
+// 	)
+// 	if db.Error != nil {
+// 		return &User{}, db.Error
+// 	}
+// 	// This is the display the updated user
+// 	err = db.Model(&User{}).Where("id = ?", uid).Take(&u).Error
+// 	if err != nil {
+// 		return &User{}, err
+// 	}
+// 	return u, nil
+// }
 
 func (u *User) DeleteAUser(db *gorm.DB, uid uint32) (int64, error) {
 

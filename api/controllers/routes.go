@@ -15,13 +15,17 @@ func (s *Server) initializeRoutes() {
 	// Confirmation user
 	s.Router.HandleFunc("/api/users/confirmation", middlewares.SetMiddlewareJSON(s.ConfirmUser)).Methods("PUT")
 
+	// Super admin routes
 	// Users routes
-	s.Router.HandleFunc("/api/users", middlewares.SetMiddlewareJSON(s.CreateUser)).Methods("POST")
-	s.Router.HandleFunc("/api/users", middlewares.SetMiddlewareAuthentication(s.GetUsers)).Methods("GET")
-	s.Router.HandleFunc("/api/users/{id}", middlewares.SetMiddlewareJSON(s.GetUser)).Methods("GET")
-	s.Router.HandleFunc("/api/users/{id}", middlewares.SetMiddlewareAuthentication(s.UpdateUser)).Methods("PUT")
-	s.Router.HandleFunc("/api/users/{id}", middlewares.SetMiddlewareAuthentication(s.DeleteUser)).Methods("DELETE")
+	s.Router.HandleFunc("/api/users", middlewares.SetMiddlewareAuthentication(
+		middlewares.SetMiddlewareIsSuperAdmin(s.DB, s.CreateUser))).Methods("POST")
 
+	// s.Router.HandleFunc("/api/users", middlewares.SetMiddlewareAuthentication(s.GetUsers)).Methods("GET")
+	// s.Router.HandleFunc("/api/users/{id}", middlewares.SetMiddlewareJSON(s.GetUser)).Methods("GET")
+	// s.Router.HandleFunc("/api/users/{id}", middlewares.SetMiddlewareAuthentication(s.UpdateUser)).Methods("PUT")
+	// s.Router.HandleFunc("/api/users/{id}", middlewares.SetMiddlewareAuthentication(s.DeleteUser)).Methods("DELETE")
+
+	// Non admin users
 	// Tenants routes
 	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(s.CreateTenant)).Methods("POST")
 	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(s.ListTenants)).Methods("GET")
