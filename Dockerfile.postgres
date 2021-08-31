@@ -1,0 +1,7 @@
+FROM postgres:13
+
+MAINTAINER Francisco Sério
+
+RUN apt-get update && apt-get install -y postgresql-contrib
+
+ADD scripts/init.sql /docker-entrypoint-initdb.d/
