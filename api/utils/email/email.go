@@ -8,7 +8,7 @@ import (
 	"text/template"
 )
 
-func SendConfirmationEmail(to []string, subject string, firstName string, lastName string, confirmationUrl string) {
+func SendConfirmationEmail(to []string, subject string, firstName string, lastName string, InvitationToken string) {
 
 	// Sender data
 	from := os.Getenv("EMAIL")
@@ -27,6 +27,8 @@ func SendConfirmationEmail(to []string, subject string, firstName string, lastNa
 
 	mimeHeaders := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 	body.Write([]byte(fmt.Sprintf("Subject: "+subject+" \n%s\n\n", mimeHeaders)))
+
+	confirmationUrl := os.Getenv("SERVER_URL") + "/api/users/confirmation?confirmation_token=" + InvitationToken
 
 	t.Execute(&body, struct {
 		FirstName       string

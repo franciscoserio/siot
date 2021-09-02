@@ -42,6 +42,8 @@ func SetMiddlewareIsDeviceValid(db *gorm.DB, next http.HandlerFunc) http.Handler
 func SetMiddlewareIsDeviceValidAndActive(db *gorm.DB, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		w.Header().Set("Content-Type", "application/json")
+
 		// get device and tenant id
 		vars := mux.Vars(r)
 		device_id := vars["device_id"]
