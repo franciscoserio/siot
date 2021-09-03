@@ -41,9 +41,18 @@ func SetMiddlewareIsTenantValid(db *gorm.DB, next http.HandlerFunc) http.Handler
 
 		user_tenant := models.UserTenant{}
 		hasTenantPerm := user_tenant.ValidateTenantPermission(db, uid_uuid, tid_uuid)
-		if !hasTenantPerm {
+		if hasTenantPerm == -1 {
 			responses.ERROR(w, http.StatusNotFound, errors.New("tenant not found"))
 			return
+
+		} else if hasTenantPerm == -2 {
+			responses.ERROR(w, http.StatusNotFound, errors.New("you do not have permissions on this tenant"))
+			return
+
+		} else if hasTenantPerm == -3 {
+			responses.ERROR(w, http.StatusNotFound, errors.New("tenant is inactive"))
+			return
+
 		}
 
 		next(w, r)

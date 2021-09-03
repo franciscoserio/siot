@@ -19,7 +19,7 @@ func CreateToken(user_id uuid.UUID, is_admin bool, status string) (string, error
 	claims["user_id"] = user_id
 	claims["is_admin"] = is_admin
 	claims["status"] = status
-	claims["exp"] = time.Now().Add(time.Hour * 1).Unix() //Token expires after 1 hour
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix() //Token expires after 24 hours
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(os.Getenv("API_SECRET")))
 

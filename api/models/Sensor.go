@@ -20,16 +20,17 @@ type Sensor struct {
 	DeviceID    uuid.UUID `sql:"type:uuid REFERENCES devices(id) ON DELETE CASCADE" json:"-"`
 }
 
-func (d *Sensor) Prepare() {
-	d.Name = html.EscapeString(strings.TrimSpace(d.Name))
-	d.Description = html.EscapeString(strings.TrimSpace(d.Description))
-	d.Unit = html.EscapeString(strings.TrimSpace(d.Description))
-	d.CreatedAt = time.Now()
-	d.UpdatedAt = time.Now()
-	d.Status = strings.ToLower(d.Status)
+func (s *Sensor) BeforeCreate() {
 
-	if d.Status != "active" && d.Status != "inactive" {
-		d.Status = "active"
+	s.Name = html.EscapeString(strings.TrimSpace(s.Name))
+	s.Description = html.EscapeString(strings.TrimSpace(s.Description))
+	s.CreatedAt = time.Now()
+	s.UpdatedAt = time.Now()
+	s.Status = strings.ToLower(s.Status)
+	s.Unit = html.EscapeString(strings.TrimSpace(s.Unit))
+
+	if s.Status != "active" && s.Status != "inactive" {
+		s.Status = "active"
 	}
 }
 

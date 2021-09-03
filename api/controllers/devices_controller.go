@@ -7,8 +7,8 @@ import (
 
 	"siot/api/models"
 	"siot/api/responses"
+	"siot/api/utils/formaterror"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
@@ -36,15 +36,10 @@ func (server *Server) CreateDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// prepares device details for the database insertion
-	device.Prepare()
-
-	// device details validation
-	validate := validator.New()
-	err = validate.Struct(device)
-	if err != nil {
-
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+	// validate json fields
+	var validations formaterror.GeneralError = device.DeviceValidations()
+	if len(validations.Errors) > 0 {
+		responses.JSON(w, http.StatusUnprocessableEntity, validations)
 		return
 	}
 

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"siot/api/utils/formaterror"
 	"siot/api/utils/pagination"
 
 	"github.com/google/uuid"
@@ -32,7 +33,8 @@ type Device struct {
 	Sensors     []Sensor  `gorm:"association_jointable_foreignkey:device_id, OnDelete:CASCADE" json:"sensors"`
 }
 
-func (d *Device) Prepare() {
+func (d *Device) BeforeSave() {
+
 	d.Name = html.EscapeString(strings.TrimSpace(d.Name))
 	d.Description = html.EscapeString(strings.TrimSpace(d.Description))
 	d.CreatedAt = time.Now()
@@ -49,6 +51,28 @@ func (d *Device) Prepare() {
 	}
 }
 
+func (d *Device) DeviceValidations() formaterror.GeneralError {
+
+	var errors formaterror.GeneralError
+
+	if d.Name == "" {
+		errors.Errors = append(errors.Errors, "name is required")
+	}
+	if len(d.Name) > 255 {
+		errors.Errors = append(errors.Errors, "name is too long")
+	}
+	if len(d.Description) > 255 {
+		errors.Errors = append(errors.Errors, "description is too long")
+	}
+	if len(d.Name) > 255 {
+		errors.Errors = append(errors.Errors, "name is too long")
+	}
+	if len(d.SecretKey) > 255 {
+		errors.Errors = append(errors.Errors, "secret_key is too long")
+	}
+	return errors
+}
+
 func (d *Device) PrepareUpdate() {
 	d.Name = html.EscapeString(strings.TrimSpace(d.Name))
 	d.Description = html.EscapeString(strings.TrimSpace(d.Description))
@@ -56,11 +80,7 @@ func (d *Device) PrepareUpdate() {
 	d.Status = strings.ToLower(d.Status)
 	d.SecretKey = html.EscapeString(strings.TrimSpace(d.SecretKey))
 
-	if d.Status == "active" {
-		d.Status = "active"
-	} else if d.Status == "inactive" {
-		d.Status = "inactive"
-	} else {
+	if d.Status != "active" && d.Status != "inactive" {
 		d.Status = ""
 	}
 }
@@ -151,7 +171,7 @@ func (d *Device) UpdateDevice(db *gorm.DB, device_id uuid.UUID) (*Device, error)
 	}
 
 	// get the updated device
-	var err_get_device error = db.Model(&Device{}).Where("id = ?", device_id).Take(&d).Error
+	var err_get_device error = db.Model(&Device{}).Where("id = ?", device_id).Preload("Sensors").Take(&d).Error
 	if err_get_device != nil {
 		return &Device{}, err_get_device
 	}

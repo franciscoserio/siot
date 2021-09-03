@@ -27,9 +27,6 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// prepare json data
-	user.Prepare()
-
 	// validate json fields
 	var validationErrors []string = user.Validate("login")
 	if len(validationErrors) > 0 {

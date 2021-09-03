@@ -1,9 +1,9 @@
 package models
 
 import (
-	"errors"
 	"html"
 	"net/http"
+	"siot/api/utils/formaterror"
 	"siot/api/utils/pagination"
 	"strings"
 	"time"
@@ -28,37 +28,105 @@ type UserTenant struct {
 	TenantID  uuid.UUID
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
-	Status    bool      `gorm:"default:true"`
+	Status    string    `gorm:"size:255;default:'active'" json:"status"`
 }
 
-func (p *Tenant) Prepare() {
-	p.Name = html.EscapeString(strings.TrimSpace(p.Name))
-	p.Description = html.EscapeString(strings.TrimSpace(p.Description))
-	p.CreatedAt = time.Now()
-	p.UpdatedAt = time.Now()
-}
+func (t *Tenant) BeforeCreate() {
 
-func (p *Tenant) Validate() error {
-	if p.Name == "" {
-		return errors.New("name is required")
+	if t.Status != "active" && t.Status != "inactive" {
+		t.Status = "active"
 	}
-	return nil
+
+	t.Name = html.EscapeString(strings.TrimSpace(t.Name))
+	t.Description = html.EscapeString(strings.TrimSpace(t.Description))
+	t.CreatedAt = time.Now()
+	t.UpdatedAt = time.Now()
 }
 
-func (t *UserTenant) ValidateTenantPermission(db *gorm.DB, user_id uuid.UUID, tenant_id uuid.UUID) bool {
+func (t *Tenant) PrepareUpdate() {
 
-	count := int64(0)
+	if t.Status != "active" && t.Status != "inactive" {
+		t.Status = ""
+	}
 
-	var err error = db.Where("user_id = ? AND tenant_id = ?", user_id, tenant_id).Find(&t).Count(&count).Error
+	t.Name = html.EscapeString(strings.TrimSpace(t.Name))
+	t.Description = html.EscapeString(strings.TrimSpace(t.Description))
+	t.UpdatedAt = time.Now()
+}
+
+func (t *Tenant) TenantValidations() formaterror.GeneralError {
+
+	var errors formaterror.GeneralError
+
+	if t.Name == "" {
+		errors.Errors = append(errors.Errors, "name is required")
+	}
+	if len(t.Name) > 255 {
+		errors.Errors = append(errors.Errors, "name is too long")
+	}
+	if len(t.Description) > 255 {
+		errors.Errors = append(errors.Errors, "description is too long")
+	}
+	return errors
+}
+
+func (t *Tenant) IsActive(db *gorm.DB, tenant_id uuid.UUID) (bool, error) {
+
+	var tenant Tenant
+	var err error = db.Where("id = ?", tenant_id).Find(&tenant).Error
 	if err != nil {
-		return false
+		return false, err
 	}
 
-	if count > 0 {
-		return true
+	if tenant.Status != "active" {
+		return false, nil
 	}
 
-	return false
+	return true, nil
+}
+
+func (t *UserTenant) ValidateTenantPermission(db *gorm.DB, user_id uuid.UUID, tenant_id uuid.UUID) int {
+
+	var userTenants []UserTenant
+	var err error = db.Where("user_id = ? AND tenant_id = ?", user_id, tenant_id).Find(&userTenants).Error
+	if err != nil {
+		return -1
+	}
+
+	if len(userTenants) > 0 {
+
+		var user User
+		var userError error = db.Where("id = ?", user_id).Find(&user).Error
+		if userError != nil {
+			return -1
+		}
+
+		// if admin, can access
+		if user.IsAdmin {
+			return 1
+
+		} else {
+
+			// if user is not active for that tenant
+			if userTenants[0].Status != "active" {
+				return -2
+			}
+
+			// if tenant is not active
+			var tenant Tenant
+			var errTenant error = db.Where("id = ?", tenant_id).Find(&tenant).Error
+			if errTenant != nil {
+				return -1
+			}
+
+			if tenant.Status != "active" {
+				return -3
+			}
+		}
+
+	}
+
+	return 1
 }
 
 func (t *Tenant) SaveTenant(db *gorm.DB, user_id uuid.UUID) (*Tenant, error) {
@@ -106,4 +174,31 @@ func (t *Tenant) FindAllTenants(db *gorm.DB, user_id string, r *http.Request) (*
 		return &[]Tenant{}, 0, 0, 0, 0, nil, nil, err
 	}
 	return &tenants, limit, page, count, totalPages, nextPage, previousPage, err
+}
+
+func (t *Tenant) GetTenant(db *gorm.DB, tenant_id string) (*Tenant, error) {
+
+	tenant := Tenant{}
+
+	var err error = db.Where("id = ?", tenant_id).Find(&tenant).Error
+	if err != nil {
+		return nil, err
+	}
+	return &tenant, err
+}
+
+func (t *Tenant) UpdateTenant(db *gorm.DB, tenant_id string) (*Tenant, error) {
+
+	var err error = db.Model(&Tenant{}).Where("id = ?", tenant_id).Updates(&t).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// get the updated device
+	var err_get_device error = db.Model(&Device{}).Where("id = ?", tenant_id).Take(&t).Error
+	if err_get_device != nil {
+		return nil, err_get_device
+	}
+	return t, nil
 }

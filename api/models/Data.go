@@ -74,7 +74,6 @@ func (d *Data) ValidateAndSendData(dbm *mongo.Client, db *gorm.DB, device_id uui
 		if !stringInSlice(body_sensors[i], list_device_sensors) {
 			sensor := Sensor{}
 			sensor.Name = body_sensors[i]
-			sensor.Prepare()
 			sensor.SaveSensor(db, device_id)
 		}
 	}

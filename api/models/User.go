@@ -25,7 +25,7 @@ type User struct {
 	LastName        string    `validate:"required" gorm:"size:255;not null" json:"last_name"`
 	Email           string    `validate:"email,required" gorm:"size:100;not null;unique" json:"email"`
 	Password        string    `validate:"required" gorm:"size:100;not null;" json:"password,omitempty"`
-	IsAdmin         bool      `gorm:"default:true" json:"-"`
+	IsAdmin         bool      `gorm:"default:false" json:"-"`
 	IsSuperAdmin    bool      `gorm:"default:false" json:"-"`
 	Status          string    `gorm:"size:255;default:'active'"`
 	InvitationToken string    `gorm:"size:255;" json:"-"`
@@ -205,6 +205,7 @@ func (u *User) CreateSuperAdminUser(db *gorm.DB) bool {
 
 func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 
+	u.IsAdmin = true
 	u.Status = "invited"
 	u.InvitationToken = randStr(30)
 	u.Password = ""
@@ -225,7 +226,6 @@ func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 
 func (u *User) SaveUserTenant(db *gorm.DB, tenant uuid.UUID) (*User, error) {
 
-	u.IsAdmin = false
 	u.Status = "invited"
 	u.InvitationToken = randStr(30)
 	u.Password = ""

@@ -9,10 +9,11 @@ import (
 	"siot/api/auth"
 	"siot/api/models"
 	"siot/api/responses"
+	"siot/api/utils/formaterror"
 	"siot/api/utils/pagination"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 func (server *Server) CreateTenant(w http.ResponseWriter, r *http.Request) {
@@ -23,13 +24,6 @@ func (server *Server) CreateTenant(w http.ResponseWriter, r *http.Request) {
 		responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 		return
 	}
-
-	// check if user is admin
-	// is_admin, _ := server.IsAdmin(user_id)
-	// if !is_admin {
-	// 	responses.ERROR(w, http.StatusUnauthorized, errors.New("only admin users have access to this endpoint"))
-	// 	return
-	// }
 
 	// get body info
 	body, err := ioutil.ReadAll(r.Body)
@@ -45,15 +39,10 @@ func (server *Server) CreateTenant(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// prepares tenant details for the database insertion
-	tenant.Prepare()
-
-	// tenant details validation
-	validate := validator.New()
-	err = validate.Struct(tenant)
-	if err != nil {
-
-		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+	// validate json fields
+	var validations formaterror.GeneralError = tenant.TenantValidations()
+	if len(validations.Errors) > 0 {
+		responses.JSON(w, http.StatusUnprocessableEntity, validations)
 		return
 	}
 
@@ -90,4 +79,53 @@ func (server *Server) ListTenants(w http.ResponseWriter, r *http.Request) {
 
 	serializerTenants := pagination.ListPaginationSerializer(limit, page, totalRecords, totalPages, nextPage, previousPage, *tenants)
 	responses.JSON(w, http.StatusOK, serializerTenants)
+}
+
+func (server *Server) GetTenant(w http.ResponseWriter, r *http.Request) {
+
+	// get tenant id
+	vars := mux.Vars(r)
+	tenant_id := vars["tenant_id"]
+
+	tenant := models.Tenant{}
+
+	t, err := tenant.GetTenant(server.DB, tenant_id)
+	if err != nil {
+		responses.ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	responses.JSON(w, http.StatusOK, t)
+}
+
+func (server *Server) UpdateTenant(w http.ResponseWriter, r *http.Request) {
+
+	// get body info
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+	}
+
+	// get tenant model
+	tenant := models.Tenant{}
+	err = json.Unmarshal(body, &tenant)
+	if err != nil {
+		responses.ERROR(w, http.StatusUnprocessableEntity, err)
+		return
+	}
+
+	// get tenant id
+	vars := mux.Vars(r)
+	tenant_id := vars["tenant_id"]
+
+	// prepares device details for the database insertion
+	tenant.PrepareUpdate()
+
+	t, err := tenant.UpdateTenant(server.DB, tenant_id)
+	if err != nil {
+		responses.ERROR(w, http.StatusInternalServerError, err)
+		return
+	}
+
+	responses.JSON(w, http.StatusOK, t)
 }

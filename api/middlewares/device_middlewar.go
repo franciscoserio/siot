@@ -51,16 +51,34 @@ func SetMiddlewareIsDeviceValidAndActive(db *gorm.DB, next http.HandlerFunc) htt
 		secret_key := r.URL.Query().Get("secret_key")
 
 		// convert device and tenant id to uuid
-		tid_uuid, _ := uuid.Parse(tenant_id)
-		did_uuid, err := uuid.Parse(device_id)
-		if err != nil {
+		tid_uuid, errTenantID := uuid.Parse(tenant_id)
+		if errTenantID != nil {
+			responses.ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid tenant id"))
+			return
+		}
+		did_uuid, errDeviceID := uuid.Parse(device_id)
+		if errDeviceID != nil {
 			responses.ERROR(w, http.StatusUnprocessableEntity, errors.New("invalid device id"))
 			return
 		}
 
-		device := models.Device{}
+		// check if tenant is active
+		tenant := models.Tenant{}
+
+		isTenantActive, errTenant := tenant.IsActive(db, tid_uuid)
+		if errTenant != nil {
+			responses.ERROR(w, http.StatusNotFound, errors.New("tenant not found"))
+			return
+		}
+
+		if !isTenantActive {
+			responses.ERROR(w, http.StatusNotFound, errors.New("tenant is inactive"))
+			return
+		}
 
 		// check if device is valid
+		device := models.Device{}
+
 		hasDevicePerm, err := device.ValidateDevicePermission(db, did_uuid, tid_uuid)
 		if err != nil {
 			responses.ERROR(w, http.StatusNotFound, errors.New("device not found"))
