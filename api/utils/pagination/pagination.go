@@ -62,7 +62,7 @@ func ValidatePagination(r *http.Request, count int) (int, int, int, int, interfa
 	totalPages := math.Ceil(float64(count) / float64(limit))
 
 	// validate pagination
-	if page > int(totalPages) {
+	if int(totalPages) > 0 && page > int(totalPages) {
 		return 0, 0, 0, 0, nil, nil, errors.New("exceeded the number of pages")
 	}
 

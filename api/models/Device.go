@@ -29,7 +29,7 @@ type Device struct {
 	Longitude   float64   `validate:"required_with=Longitude,latitude" gorm:"type:decimal(11,8);default:0.0" json:"longitude"`
 	TenantID    uuid.UUID `sql:"type:uuid REFERENCES tenants(id)" json:"-"`
 	SecretKey   string    `gorm:"size:255;" json:"secret_key"`
-	Streams     []Stream  `gorm:"association_jointable_foreignkey:device_id, OnDelete:CASCADE" json:"streams"`
+	Sensors     []Sensor  `gorm:"association_jointable_foreignkey:device_id, OnDelete:CASCADE" json:"sensors"`
 }
 
 func (d *Device) Prepare() {
@@ -82,7 +82,7 @@ func (d *Device) SaveDevice(dbm *mongo.Client, db *gorm.DB, tenant_id uuid.UUID)
 	d.TenantID = tenant_id
 
 	// create tenant
-	err = db.Model(&Device{}).Omit("Streams").Create(&d).Error
+	err = db.Model(&Device{}).Omit("Sensors").Create(&d).Error
 	if err != nil {
 		return &Device{}, err
 	}
@@ -125,7 +125,7 @@ func (d *Device) FindAllDevices(db *gorm.DB, tenant_id string, r *http.Request) 
 	}
 
 	// query
-	var err error = db.Where("tenant_id = ?", tenant_id).Preload("Streams").Limit(limit).Offset(offset).Order("updated_at desc").Find(&devices).Error
+	var err error = db.Where("tenant_id = ?", tenant_id).Preload("Sensors").Limit(limit).Offset(offset).Order("updated_at desc").Find(&devices).Error
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func (d *Device) FindAllDevices(db *gorm.DB, tenant_id string, r *http.Request) 
 
 func (d *Device) FindDevice(db *gorm.DB, device_id uuid.UUID) (*Device, error) {
 
-	var err error = db.Model(&Device{}).Where("id = ?", device_id).Preload("Streams").Take(&d).Error
+	var err error = db.Model(&Device{}).Where("id = ?", device_id).Preload("Sensors").Take(&d).Error
 	if err != nil {
 		return &Device{}, err
 	}

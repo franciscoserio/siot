@@ -9,7 +9,7 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-type Stream struct {
+type Sensor struct {
 	ID          uuid.UUID `gorm:"type:uuid;default:public.uuid_generate_v4()" json:"id"`
 	Name        string    `validate:"required" gorm:"size:255;not null;" json:"name"`
 	Description string    `gorm:"size:255;" json:"description"`
@@ -20,7 +20,7 @@ type Stream struct {
 	DeviceID    uuid.UUID `sql:"type:uuid REFERENCES devices(id) ON DELETE CASCADE" json:"-"`
 }
 
-func (d *Stream) Prepare() {
+func (d *Sensor) Prepare() {
 	d.Name = html.EscapeString(strings.TrimSpace(d.Name))
 	d.Description = html.EscapeString(strings.TrimSpace(d.Description))
 	d.Unit = html.EscapeString(strings.TrimSpace(d.Description))
@@ -33,16 +33,16 @@ func (d *Stream) Prepare() {
 	}
 }
 
-func (s *Stream) SaveStream(db *gorm.DB, device_id uuid.UUID) (*Stream, error) {
+func (s *Sensor) SaveSensor(db *gorm.DB, device_id uuid.UUID) (*Sensor, error) {
 	var err error
 
 	// get device for the association
 	s.DeviceID = device_id
 
 	// create tenant
-	err = db.Model(&Stream{}).Omit("Devices").Create(&s).Error
+	err = db.Model(&Sensor{}).Omit("Devices").Create(&s).Error
 	if err != nil {
-		return &Stream{}, err
+		return &Sensor{}, err
 	}
 
 	return s, nil

@@ -38,8 +38,11 @@ func (s *Server) initializeRoutes() {
 				s.DB, middlewares.SetMiddlewareIsUserTenantValid(s.DB, s.GetTenantUser)))).Methods("GET")
 
 	// Tenants routes
-	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(s.CreateTenant)).Methods("POST")
-	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(s.ListTenants)).Methods("GET")
+	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(
+		middlewares.SetMiddlewareIsAdmin(s.DB, s.CreateTenant))).Methods("POST")
+
+	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(
+		middlewares.SetMiddlewareIsAdmin(s.DB, s.ListTenants))).Methods("GET")
 
 	// Devices routes
 	s.Router.HandleFunc("/api/{tenant_id}/devices",

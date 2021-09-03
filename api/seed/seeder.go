@@ -12,13 +12,13 @@ import (
 func Load(db *gorm.DB) {
 
 	// Drop all tables
-	// errDrop := db.DropTableIfExists(&models.Rule{}, &models.Stream{}, &models.Device{}, &models.UserTenant{}, &models.User{}, &models.Tenant{}).Error
+	// errDrop := db.DropTableIfExists(&models.Rule{}, &models.Sensor{}, &models.Device{}, &models.UserTenant{}, &models.Tenant{}, &models.User{}).Error
 	// if errDrop != nil {
 	// 	log.Fatalf("cannot drop table: %v", errDrop)
 	// }
 
 	// Migration
-	err := db.AutoMigrate(&models.User{}, &models.Tenant{}, &models.UserTenant{}, &models.Device{}, &models.Stream{}, &models.Rule{}).Error
+	err := db.AutoMigrate(&models.User{}, &models.Tenant{}, &models.UserTenant{}, &models.Device{}, &models.Sensor{}, &models.Rule{}).Error
 	if err != nil {
 		log.Fatalf("cannot migrate table: %v", err)
 	}
@@ -31,8 +31,8 @@ func Load(db *gorm.DB) {
 	// devices
 	db.Table("devices").AddForeignKey("tenant_id", "tenants(id)", "CASCADE", "CASCADE")
 
-	// streams
-	db.Table("streams").AddForeignKey("device_id", "devices(id)", "CASCADE", "CASCADE")
+	// sensors
+	db.Table("sensors").AddForeignKey("device_id", "devices(id)", "CASCADE", "CASCADE")
 
 	// rules
 	db.Table("rules").AddForeignKey("device_id", "devices(id)", "CASCADE", "CASCADE")

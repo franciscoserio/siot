@@ -18,7 +18,7 @@ import (
 
 type Rule struct {
 	ID                      uuid.UUID `gorm:"type:uuid;default:public.uuid_generate_v4()" json:"id"`
-	Stream                  string    `validate:"required" gorm:"size:255;not null;" json:"stream"`
+	Sensor                  string    `validate:"required" gorm:"size:255;not null;" json:"sensor"`
 	Description             string    `gorm:"size:255;" json:"description"`
 	Operation               string    `gorm:"size:255;" json:"operation"`
 	CountLatest             int64     `gorm:"default:1;" json:"count_latest"`
@@ -86,7 +86,7 @@ func onlyOneDeviceValue(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uui
 	opt.SetSort(bson.M{"$natural": -1})
 
 	// set filters to mongodb
-	filter := bson.D{{rule.Stream, bson.D{{"$exists", true}}}}
+	filter := bson.D{{rule.Sensor, bson.D{{"$exists", true}}}}
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	collection := dbm.Database("siot").Collection(fmt.Sprintf("%v", device_id))
@@ -104,7 +104,7 @@ func onlyOneDeviceValue(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uui
 
 		if rule.Operator == ">" {
 			if ruleValue, err := strconv.ParseFloat(rule.Value, 64); err == nil {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Sensor]), 64); err == nil {
 					if deviceValue > ruleValue {
 						rule.updateNotificationTime(db)
 						fmt.Println("É MAIOR. ENVIAR NOTIFICAÇÃO")
@@ -114,7 +114,7 @@ func onlyOneDeviceValue(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uui
 
 		} else if rule.Operator == ">=" {
 			if ruleValue, err := strconv.ParseFloat(rule.Value, 64); err == nil {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Sensor]), 64); err == nil {
 					if deviceValue >= ruleValue {
 						rule.updateNotificationTime(db)
 						fmt.Println("É MAIOR OU IGUAL. ENVIAR NOTIFICAÇÃO")
@@ -123,7 +123,7 @@ func onlyOneDeviceValue(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uui
 			}
 		} else if rule.Operator == "<" {
 			if ruleValue, err := strconv.ParseFloat(rule.Value, 64); err == nil {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Sensor]), 64); err == nil {
 					if deviceValue < ruleValue {
 						rule.updateNotificationTime(db)
 						fmt.Println("É MENOR. ENVIAR NOTIFICAÇÃO")
@@ -132,7 +132,7 @@ func onlyOneDeviceValue(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uui
 			}
 		} else if rule.Operator == "<=" {
 			if ruleValue, err := strconv.ParseFloat(rule.Value, 64); err == nil {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Sensor]), 64); err == nil {
 					if deviceValue <= ruleValue {
 						rule.updateNotificationTime(db)
 						fmt.Println("É MENOR OU IGUAL. ENVIAR NOTIFICAÇÃO")
@@ -141,19 +141,19 @@ func onlyOneDeviceValue(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uui
 			}
 		} else {
 			if ruleValue, err := strconv.ParseFloat(rule.Value, 64); err == nil {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", data.Data[0][rule.Sensor]), 64); err == nil {
 					if deviceValue == ruleValue {
 						rule.updateNotificationTime(db)
 						fmt.Println("É IGUAL. ENVIAR NOTIFICAÇÃO")
 					}
 				} else {
-					if fmt.Sprintf("%v", data.Data[0][rule.Stream]) == rule.Value {
+					if fmt.Sprintf("%v", data.Data[0][rule.Sensor]) == rule.Value {
 						rule.updateNotificationTime(db)
 						fmt.Println("É IGUAL. ENVIAR NOTIFICAÇÃO")
 					}
 				}
 			} else {
-				if fmt.Sprintf("%v", data.Data[0][rule.Stream]) == rule.Value {
+				if fmt.Sprintf("%v", data.Data[0][rule.Sensor]) == rule.Value {
 					rule.updateNotificationTime(db)
 					fmt.Println("É IGUAL. ENVIAR NOTIFICAÇÃO")
 				}
@@ -178,7 +178,7 @@ func latestDeviceData(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uuid.
 	opt.SetSort(bson.M{"$natural": -1})
 
 	// set filters to mongodb
-	filter := bson.D{{rule.Stream, bson.D{{"$exists", true}}}}
+	filter := bson.D{{rule.Sensor, bson.D{{"$exists", true}}}}
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	collection := dbm.Database("siot").Collection(fmt.Sprintf("%v", device_id))
@@ -202,7 +202,7 @@ func latestDeviceData(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uuid.
 
 			for _, value := range data.Data {
 
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Sensor]), 64); err == nil {
 					calculatedValue = calculatedValue + deviceValue
 				}
 
@@ -213,7 +213,7 @@ func latestDeviceData(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uuid.
 			var auxValue float64
 
 			for _, value := range data.Data {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Sensor]), 64); err == nil {
 					auxValue = auxValue + deviceValue
 				}
 			}
@@ -224,7 +224,7 @@ func latestDeviceData(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uuid.
 			var auxValues []float64
 
 			for _, value := range data.Data {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Sensor]), 64); err == nil {
 					auxValues = append(auxValues, deviceValue)
 				}
 			}
@@ -247,7 +247,7 @@ func latestDeviceData(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uuid.
 			var auxValue float64
 
 			for _, value := range data.Data {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Sensor]), 64); err == nil {
 					if deviceValue > auxValue {
 						auxValue = deviceValue
 					}
@@ -260,7 +260,7 @@ func latestDeviceData(dbm *mongo.Client, db *gorm.DB, rule Rule, device_id uuid.
 			var auxValue float64
 
 			for _, value := range data.Data {
-				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Stream]), 64); err == nil {
+				if deviceValue, err := strconv.ParseFloat(fmt.Sprintf("%v", value[rule.Sensor]), 64); err == nil {
 					if auxValue == 0 {
 						auxValue = deviceValue
 

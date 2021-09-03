@@ -22,18 +22,18 @@ type Data struct {
 func (d *Data) ValidateAndSendData(dbm *mongo.Client, db *gorm.DB, device_id uuid.UUID) error {
 
 	device := Device{}
-	device_streams, _ := device.FindDevice(db, device_id)
+	device_sensors, _ := device.FindDevice(db, device_id)
 	var values []interface{}
 
-	// streams of the current device
-	var list_device_streams []string
+	// sensors of the current device
+	var list_device_sensors []string
 
-	for i := 0; i < len(device_streams.Streams); i++ {
-		list_device_streams = append(list_device_streams, device_streams.Streams[i].Name)
+	for i := 0; i < len(device_sensors.Sensors); i++ {
+		list_device_sensors = append(list_device_sensors, device_sensors.Sensors[i].Name)
 	}
 
-	// body streams
-	var body_streams []string
+	// body sensors
+	var body_sensors []string
 
 	for i := 0; i < len(d.Data); i++ {
 
@@ -49,33 +49,33 @@ func (d *Data) ValidateAndSendData(dbm *mongo.Client, db *gorm.DB, device_id uui
 
 		// body keys
 		for key, _ := range d.Data[i] {
-			if !stringInSlice(key, body_streams) && key != "collected_at" {
-				body_streams = append(body_streams, key)
+			if !stringInSlice(key, body_sensors) && key != "collected_at" {
+				body_sensors = append(body_sensors, key)
 			}
 		}
 
 		values = append(values, d.Data[i])
 	}
 
-	// check for active/inactive streams
-	for i := 0; i < len(body_streams); i++ {
-		for j := 0; j < len(device_streams.Streams); j++ {
-			if body_streams[i] == device_streams.Streams[i].Name {
-				if device_streams.Streams[i].Status != "active" {
-					return errors.New("You can't send data with stream " + device_streams.Streams[i].Name + " because is inactive")
+	// check for active/inactive sensors
+	for i := 0; i < len(body_sensors); i++ {
+		for j := 0; j < len(device_sensors.Sensors); j++ {
+			if body_sensors[i] == device_sensors.Sensors[i].Name {
+				if device_sensors.Sensors[i].Status != "active" {
+					return errors.New("You can't send data with sensor " + device_sensors.Sensors[i].Name + " because is inactive")
 				}
 			}
 		}
 	}
 
-	// add streams
-	for i := 0; i < len(body_streams); i++ {
+	// add sensors
+	for i := 0; i < len(body_sensors); i++ {
 
-		if !stringInSlice(body_streams[i], list_device_streams) {
-			stream := Stream{}
-			stream.Name = body_streams[i]
-			stream.Prepare()
-			stream.SaveStream(db, device_id)
+		if !stringInSlice(body_sensors[i], list_device_sensors) {
+			sensor := Sensor{}
+			sensor.Name = body_sensors[i]
+			sensor.Prepare()
+			sensor.SaveSensor(db, device_id)
 		}
 	}
 
@@ -103,7 +103,7 @@ func (d *Data) GetData(dbm *mongo.Client, db *gorm.DB, device_id uuid.UUID, r *h
 
 	// filter params
 	var opt options.FindOptions
-	streams, projections := SetStreams(db, r, device_id)
+	sensors, projections := SetSensors(db, r, device_id)
 
 	opt.SetProjection(projections)
 	opt.SetLimit(int64(limit))
@@ -112,8 +112,8 @@ func (d *Data) GetData(dbm *mongo.Client, db *gorm.DB, device_id uuid.UUID, r *h
 	// set filters to mongodb
 	filter := bson.D{{"collected_at", bson.D{{"$gt", from}, {"$lt", to}}}}
 
-	for i := 0; i < len(streams); i++ {
-		filter = append(filter, bson.E{streams[i], bson.D{{"$exists", true}}})
+	for i := 0; i < len(sensors); i++ {
+		filter = append(filter, bson.E{sensors[i], bson.D{{"$exists", true}}})
 	}
 
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
@@ -169,32 +169,32 @@ func ValidateFromTo(r *http.Request) (string, string) {
 	return from, to
 }
 
-func SetStreams(db *gorm.DB, r *http.Request, device_id uuid.UUID) ([]string, bson.M) {
+func SetSensors(db *gorm.DB, r *http.Request, device_id uuid.UUID) ([]string, bson.M) {
 
-	// device streams
+	// device sensors
 	device := Device{}
-	device_streams, _ := device.FindDevice(db, device_id)
+	device_sensors, _ := device.FindDevice(db, device_id)
 
-	// url streams
-	url_streams := r.URL.Query()["streams"]
+	// url sensors
+	url_sensors := r.URL.Query()["sensors"]
 
-	// final array of streams
-	var streams []string
-	streams = append(streams, "collected_at")
+	// final array of sensors
+	var sensors []string
+	sensors = append(sensors, "collected_at")
 
-	if len(url_streams) == 0 {
-		for i := 0; i < len(device_streams.Streams); i++ {
-			streams = append(streams, device_streams.Streams[i].Name)
+	if len(url_sensors) == 0 {
+		for i := 0; i < len(device_sensors.Sensors); i++ {
+			sensors = append(sensors, device_sensors.Sensors[i].Name)
 		}
 
 	} else {
 
-		for i := 0; i < len(url_streams); i++ {
-			for j := 0; j < len(device_streams.Streams); j++ {
+		for i := 0; i < len(url_sensors); i++ {
+			for j := 0; j < len(device_sensors.Sensors); j++ {
 
-				if url_streams[i] == device_streams.Streams[j].Name {
-					if !stringInSlice(url_streams[i], streams) && url_streams[i] != "collected_at" {
-						streams = append(streams, url_streams[i])
+				if url_sensors[i] == device_sensors.Sensors[j].Name {
+					if !stringInSlice(url_sensors[i], sensors) && url_sensors[i] != "collected_at" {
+						sensors = append(sensors, url_sensors[i])
 					}
 
 				}
@@ -202,18 +202,18 @@ func SetStreams(db *gorm.DB, r *http.Request, device_id uuid.UUID) ([]string, bs
 		}
 	}
 
-	if len(streams) == 1 {
-		for i := 0; i < len(device_streams.Streams); i++ {
-			streams = append(streams, device_streams.Streams[i].Name)
+	if len(sensors) == 1 {
+		for i := 0; i < len(device_sensors.Sensors); i++ {
+			sensors = append(sensors, device_sensors.Sensors[i].Name)
 		}
 	}
 
 	proj := bson.M{}
 	proj["_id"] = 0
 
-	for i := 0; i < len(streams); i++ {
-		proj[streams[i]] = 1
+	for i := 0; i < len(sensors); i++ {
+		proj[sensors[i]] = 1
 	}
 
-	return streams, proj
+	return sensors, proj
 }
