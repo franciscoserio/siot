@@ -86,4 +86,33 @@ func (s *Server) initializeRoutes() {
 		middlewares.SetMiddlewareAuthentication(
 			middlewares.SetMiddlewareIsTenantValid(
 				s.DB, middlewares.SetMiddlewareIsDeviceValid(s.DB, s.GetData)))).Methods("GET")
+
+	// Streams routes
+	s.Router.HandleFunc("/api/{tenant_id}/devices/{device_id}/sensors",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsDeviceValid(s.DB, s.CreateSensor)))).Methods("POST")
+
+	s.Router.HandleFunc("/api/{tenant_id}/devices/{device_id}/sensors",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsDeviceValid(s.DB, s.ListSensors)))).Methods("GET")
+
+	s.Router.HandleFunc("/api/{tenant_id}/devices/{device_id}/sensors/{sensor_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsDeviceValid(
+					s.DB, middlewares.SetMiddlewareIsSensorValid(s.DB, s.ShowSensor))))).Methods("GET")
+
+	s.Router.HandleFunc("/api/{tenant_id}/devices/{device_id}/sensors/{sensor_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsDeviceValid(
+					s.DB, middlewares.SetMiddlewareIsSensorValid(s.DB, s.DeleteSensor))))).Methods("DELETE")
+
+	s.Router.HandleFunc("/api/{tenant_id}/devices/{device_id}/sensors/{sensor_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsDeviceValid(
+					s.DB, middlewares.SetMiddlewareIsSensorValid(s.DB, s.UpdateSensor))))).Methods("PUT")
 }

@@ -66,19 +66,15 @@ func ValidatePagination(r *http.Request, count int) (int, int, int, int, interfa
 		return 0, 0, 0, 0, nil, nil, errors.New("exceeded the number of pages")
 	}
 
+	// calculate next page
 	var nextPage interface{}
 
 	if page >= int(totalPages) {
 		nextPage = nil
 
 	} else {
-
-		if strings.Contains(fmt.Sprintf("%v", r.URL), "page="+fmt.Sprintf("%v", page)) {
-			pageUrl := strings.ReplaceAll(fmt.Sprintf("%v", r.URL), "page="+fmt.Sprintf("%v", page), "page="+fmt.Sprintf("%v", page+1))
-			nextPage = os.Getenv("SERVER_URL") + pageUrl
-		} else {
-			nextPage = os.Getenv("SERVER_URL") + fmt.Sprintf("%v", r.URL) + "?page=" + fmt.Sprintf("%v", page+1)
-		}
+		pathWithoutParams := strings.Split(fmt.Sprintf("%v", r.URL), "?")
+		nextPage = os.Getenv("SERVER_URL") + pathWithoutParams[0] + "?limit=" + fmt.Sprintf("%v", limit) + "&page=" + fmt.Sprintf("%v", page+1)
 	}
 
 	// calculate previous page
@@ -88,13 +84,8 @@ func ValidatePagination(r *http.Request, count int) (int, int, int, int, interfa
 		previousPage = nil
 
 	} else {
-
-		if strings.Contains(fmt.Sprintf("%v", r.URL), "page="+fmt.Sprintf("%v", page)) {
-			pageUrl := strings.ReplaceAll(fmt.Sprintf("%v", r.URL), "page="+fmt.Sprintf("%v", page), "page="+fmt.Sprintf("%v", page-1))
-			previousPage = os.Getenv("SERVER_URL") + pageUrl
-		} else {
-			previousPage = os.Getenv("SERVER_URL") + fmt.Sprintf("%v", r.URL) + "?page=" + fmt.Sprintf("%v", page-1)
-		}
+		pathWithoutParams := strings.Split(fmt.Sprintf("%v", r.URL), "?")
+		previousPage = os.Getenv("SERVER_URL") + pathWithoutParams[0] + "?limit=" + fmt.Sprintf("%v", limit) + "&page=" + fmt.Sprintf("%v", page-1)
 	}
 
 	return ((page - 1) * limit), limit, page, int(totalPages), nextPage, previousPage, nil

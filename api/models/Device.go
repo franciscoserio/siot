@@ -64,9 +64,6 @@ func (d *Device) DeviceValidations() formaterror.GeneralError {
 	if len(d.Description) > 255 {
 		errors.Errors = append(errors.Errors, "description is too long")
 	}
-	if len(d.Name) > 255 {
-		errors.Errors = append(errors.Errors, "name is too long")
-	}
 	if len(d.SecretKey) > 255 {
 		errors.Errors = append(errors.Errors, "secret_key is too long")
 	}
