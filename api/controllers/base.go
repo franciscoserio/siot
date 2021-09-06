@@ -15,6 +15,7 @@ import (
 	"siot/api/models"
 
 	_ "github.com/jinzhu/gorm/dialects/postgres" //postgres database driver
+	"github.com/rs/cors"
 )
 
 type Server struct {
@@ -55,5 +56,6 @@ func (server *Server) Initialize(DbUser, DbPassword, DbPort, DbHost, DbName, mon
 
 func (server *Server) Run(addr string) {
 	fmt.Println("Listening to port 8080")
-	log.Fatal(http.ListenAndServe(addr, server.Router))
+	handler := cors.Default().Handler(server.Router)
+	log.Fatal(http.ListenAndServe(addr, handler))
 }
