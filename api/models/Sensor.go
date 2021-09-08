@@ -139,6 +139,23 @@ func (s *Sensor) IsValidSensor(db *gorm.DB, sensor_id uuid.UUID, device_id uuid.
 	return false, nil
 }
 
+func (s *Sensor) IsValidSensorName(db *gorm.DB, sensor_name string, device_id uuid.UUID) bool {
+
+	sensors := []Sensor{}
+
+	// query
+	err := db.Select("sensors.name, sensors.device_id").Joins("join devices on sensors.device_id = devices.id").Where("sensors.name = ? AND sensors.device_id = ?", sensor_name, device_id).Find(&sensors).Error
+	if err != nil {
+		return false
+	}
+
+	if len(sensors) > 0 {
+		return true
+	}
+
+	return false
+}
+
 func (s *Sensor) GetSensor(db *gorm.DB, sensor_id string) (*Sensor, error) {
 
 	sensor := Sensor{}

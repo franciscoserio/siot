@@ -124,9 +124,10 @@ func (t *UserTenant) ValidateTenantPermission(db *gorm.DB, user_id uuid.UUID, te
 			}
 		}
 
+		return 1
 	}
 
-	return 1
+	return -1
 }
 
 func (t *Tenant) SaveTenant(db *gorm.DB, user_id uuid.UUID) (*Tenant, error) {

@@ -33,7 +33,7 @@ type Device struct {
 	Sensors     []Sensor  `gorm:"association_jointable_foreignkey:device_id, OnDelete:CASCADE" json:"sensors"`
 }
 
-func (d *Device) BeforeSave() {
+func (d *Device) BeforeCreate() {
 
 	d.Name = html.EscapeString(strings.TrimSpace(d.Name))
 	d.Description = html.EscapeString(strings.TrimSpace(d.Description))
@@ -90,6 +90,21 @@ func (d *Device) ValidateDevicePermission(db *gorm.DB, device_id uuid.UUID, tena
 	}
 
 	return d, nil
+}
+
+func (d *Device) IsValidDevice(db *gorm.DB, device_id, tenant_id uuid.UUID) bool {
+
+	var devices []Device
+	var err error = db.Where("id = ? and tenant_id = ?", device_id, tenant_id).Find(&devices).Error
+	if err != nil {
+		return false
+	}
+
+	if len(devices) > 0 {
+		return true
+	}
+
+	return false
 }
 
 func (d *Device) SaveDevice(dbm *mongo.Client, db *gorm.DB, tenant_id uuid.UUID) (*Device, error) {

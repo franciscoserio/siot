@@ -87,7 +87,7 @@ func (d *Data) ValidateAndSendData(dbm *mongo.Client, db *gorm.DB, device_id uui
 	}
 
 	// check rules
-	_ = CheckRule(dbm, db, device_id)
+	go CheckRule(dbm, db, device_id, d.Data[len(d.Data)-1])
 
 	return nil
 }

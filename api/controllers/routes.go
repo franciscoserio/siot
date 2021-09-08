@@ -26,6 +26,25 @@ func (s *Server) initializeRoutes() {
 		middlewares.SetMiddlewareIsAdmin(
 			s.DB, middlewares.SetMiddlewareIsTenantValid(s.DB, s.AddUser)))).Methods("POST")
 
+	// Tenants routes
+	s.Router.HandleFunc("/api/tenants",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsAdmin(s.DB, s.CreateTenant))).Methods("POST")
+
+	s.Router.HandleFunc("/api/tenants",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsAdmin(s.DB, s.ListTenants))).Methods("GET")
+
+	s.Router.HandleFunc("/api/tenants/{tenant_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsAdmin(
+				s.DB, middlewares.SetMiddlewareIsTenantValid(s.DB, s.GetTenant)))).Methods("GET")
+
+	s.Router.HandleFunc("/api/tenants/{tenant_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsAdmin(
+				s.DB, middlewares.SetMiddlewareIsTenantValid(s.DB, s.UpdateTenant)))).Methods("PUT")
+
 	// Non admin users
 	// Users routes
 	s.Router.HandleFunc("/api/{tenant_id}/users",
@@ -37,27 +56,10 @@ func (s *Server) initializeRoutes() {
 			middlewares.SetMiddlewareIsTenantValid(
 				s.DB, middlewares.SetMiddlewareIsUserTenantValid(s.DB, s.GetTenantUser)))).Methods("GET")
 
-	// Tenants routes
-	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(
-		middlewares.SetMiddlewareIsAdmin(s.DB, s.CreateTenant))).Methods("POST")
-
-	s.Router.HandleFunc("/api/tenants", middlewares.SetMiddlewareAuthentication(
-		middlewares.SetMiddlewareIsAdmin(s.DB, s.ListTenants))).Methods("GET")
-
-	s.Router.HandleFunc("/api/tenants/{tenant_id}",
-		middlewares.SetMiddlewareAuthentication(
-			middlewares.SetMiddlewareIsAdmin(
-				s.DB, middlewares.SetMiddlewareIsTenantValid(s.DB, s.UpdateTenant)))).Methods("PUT")
-
 	// Devices routes
 	s.Router.HandleFunc("/api/{tenant_id}/devices",
 		middlewares.SetMiddlewareAuthentication(
 			middlewares.SetMiddlewareIsTenantValid(s.DB, s.CreateDevice))).Methods("POST")
-
-	s.Router.HandleFunc("/api/tenants/{tenant_id}",
-		middlewares.SetMiddlewareAuthentication(
-			middlewares.SetMiddlewareIsAdmin(
-				s.DB, middlewares.SetMiddlewareIsTenantValid(s.DB, s.GetTenant)))).Methods("GET")
 
 	s.Router.HandleFunc("/api/{tenant_id}/devices",
 		middlewares.SetMiddlewareAuthentication(
@@ -87,7 +89,7 @@ func (s *Server) initializeRoutes() {
 			middlewares.SetMiddlewareIsTenantValid(
 				s.DB, middlewares.SetMiddlewareIsDeviceValid(s.DB, s.GetData)))).Methods("GET")
 
-	// Streams routes
+	// Sensors routes
 	s.Router.HandleFunc("/api/{tenant_id}/devices/{device_id}/sensors",
 		middlewares.SetMiddlewareAuthentication(
 			middlewares.SetMiddlewareIsTenantValid(
@@ -115,4 +117,28 @@ func (s *Server) initializeRoutes() {
 			middlewares.SetMiddlewareIsTenantValid(
 				s.DB, middlewares.SetMiddlewareIsDeviceValid(
 					s.DB, middlewares.SetMiddlewareIsSensorValid(s.DB, s.UpdateSensor))))).Methods("PUT")
+
+	// Roles routes
+	s.Router.HandleFunc("/api/{tenant_id}/rules",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(s.DB, s.CreateRule))).Methods("POST")
+
+	s.Router.HandleFunc("/api/{tenant_id}/rules",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(s.DB, s.ListRules))).Methods("GET")
+
+	s.Router.HandleFunc("/api/{tenant_id}/rules/{rule_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsRuleValid(s.DB, s.ShowRule)))).Methods("GET")
+
+	s.Router.HandleFunc("/api/{tenant_id}/rules/{rule_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsRuleValid(s.DB, s.UpdateRule)))).Methods("PUT")
+
+	s.Router.HandleFunc("/api/{tenant_id}/rules/{rule_id}",
+		middlewares.SetMiddlewareAuthentication(
+			middlewares.SetMiddlewareIsTenantValid(
+				s.DB, middlewares.SetMiddlewareIsRuleValid(s.DB, s.DeleteRule)))).Methods("DELETE")
 }
