@@ -94,6 +94,26 @@ func (d *Data) ValidateAndSendData(dbm *mongo.Client, db *gorm.DB, device_id uui
 
 func (d *Data) GetData(dbm *mongo.Client, db *gorm.DB, device_id uuid.UUID, r *http.Request) (*Data, error) {
 
+	// // count
+	// // filter params
+	// var opt_count options.FindOptions
+	// sensors_count, _ := SetSensors(db, r, device_id)
+
+	// var filter_count primitive.D
+
+	// for i := 0; i < len(sensors_count); i++ {
+	// 	filter_count = append(filter_count, bson.E{sensors_count[i], bson.D{{"$exists", true}}})
+	// }
+
+	// ctx_count, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	// collection_count := dbm.Database("siot").Collection(fmt.Sprintf("%v", device_id))
+	// cur_count, err := collection_count.EstimatedDocumentCount(ctx_count, filter_count)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// fmt.Println(cur_count)
+
 	// pagination
 	offset, limit := pagination.ValidatePaginationData(r)
 
@@ -179,15 +199,8 @@ func SetSensors(db *gorm.DB, r *http.Request, device_id uuid.UUID) ([]string, bs
 
 	// final array of sensors
 	var sensors []string
-	sensors = append(sensors, "collected_at")
 
-	if len(url_sensors) == 0 {
-		for i := 0; i < len(device_sensors.Sensors); i++ {
-			sensors = append(sensors, device_sensors.Sensors[i].Name)
-		}
-
-	} else {
-
+	if len(url_sensors) > 0 {
 		for i := 0; i < len(url_sensors); i++ {
 			for j := 0; j < len(device_sensors.Sensors); j++ {
 
@@ -201,10 +214,8 @@ func SetSensors(db *gorm.DB, r *http.Request, device_id uuid.UUID) ([]string, bs
 		}
 	}
 
-	if len(sensors) == 1 {
-		for i := 0; i < len(device_sensors.Sensors); i++ {
-			sensors = append(sensors, device_sensors.Sensors[i].Name)
-		}
+	if len(sensors) > 0 {
+		sensors = append(sensors, "collected_at")
 	}
 
 	proj := bson.M{}

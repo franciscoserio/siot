@@ -378,20 +378,28 @@ func (e *Rule) DeleteRule(db *gorm.DB, rule_id string) error {
 func CheckRule(dbm *mongo.Client, db *gorm.DB, device_id uuid.UUID, lastData map[string]interface{}) {
 
 	var rules []Rule
+	var sensorsLastData []string
+
+	for key, _ := range lastData {
+		if key != "collected_at" {
+			sensorsLastData = append(sensorsLastData, key)
+		}
+	}
 
 	db.Where("device_id = ?", device_id).Find(&rules)
 
 	for i := 0; i < len(rules); i++ {
+		for j := 0; j < len(sensorsLastData); j++ {
+			if rules[i].Sensor == sensorsLastData[j] && rules[i].Status == "active" {
 
-		if rules[i].Status == "active" {
+				// only one device value
+				if rules[i].CountLatest < 2 {
+					onlyOneDeviceValue(dbm, db, rules[i], device_id, lastData)
 
-			// only one device value
-			if rules[i].CountLatest < 2 {
-				onlyOneDeviceValue(dbm, db, rules[i], device_id, lastData)
-
-				// N latest device data
-			} else if rules[i].CountLatest > 1 {
-				latestDeviceData(dbm, db, rules[i], device_id, lastData)
+					// N latest device data
+				} else if rules[i].CountLatest > 1 {
+					latestDeviceData(dbm, db, rules[i], device_id, lastData)
+				}
 			}
 		}
 	}

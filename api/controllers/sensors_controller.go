@@ -118,7 +118,7 @@ func (server *Server) UpdateSensor(w http.ResponseWriter, r *http.Request) {
 	device_id := vars["device_id"]
 	sensor_id := vars["sensor_id"]
 
-	d, err := sensor.UpdateSensor(server.DB, sensor_id, device_id)
+	d, err := sensor.UpdateSensor(server.MDB, server.DB, sensor_id, device_id)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return
@@ -134,7 +134,7 @@ func (server *Server) DeleteSensor(w http.ResponseWriter, r *http.Request) {
 
 	sensor := models.Sensor{}
 
-	err := sensor.DeleteSensor(server.DB, sensor_id)
+	err := sensor.DeleteSensor(server.MDB, server.DB, sensor_id)
 	if err != nil {
 		responses.ERROR(w, http.StatusInternalServerError, err)
 		return

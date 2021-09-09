@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"errors"
 	"html"
 	"net/http"
@@ -11,6 +12,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jinzhu/gorm"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type Sensor struct {
@@ -168,7 +172,7 @@ func (s *Sensor) GetSensor(db *gorm.DB, sensor_id string) (*Sensor, error) {
 	return &sensor, nil
 }
 
-func (s *Sensor) UpdateSensor(db *gorm.DB, sensor_id string, device_id string) (*Sensor, error) {
+func (s *Sensor) UpdateSensor(dbm *mongo.Client, db *gorm.DB, sensor_id string, device_id string) (*Sensor, error) {
 
 	sensor, _ := s.GetSensor(db, sensor_id)
 
@@ -199,15 +203,86 @@ func (s *Sensor) UpdateSensor(db *gorm.DB, sensor_id string, device_id string) (
 	if err_get_sensor != nil {
 		return nil, err_get_sensor
 	}
+
+	if sensor.Name != s.Name {
+		// update all sensor names in mongodb
+		go UpdateSensorMongo(dbm, sensor.Name, s.Name, sensor.DeviceID.String())
+	}
+
 	return s, nil
 }
 
-func (s *Sensor) DeleteSensor(db *gorm.DB, sensor_id string) error {
+func UpdateSensorMongo(dbm *mongo.Client, oldSensorName, newSensorNamedeviceId, deviceId string) {
+
+	var filter primitive.D
+
+	filter = append(filter, bson.E{oldSensorName, bson.D{{"$exists", true}}})
+
+	update := bson.M{"$rename": bson.M{oldSensorName: newSensorNamedeviceId}}
+
+	collection := dbm.Database("siot").Collection(deviceId)
+	_, _ = collection.UpdateMany(context.Background(), filter, update)
+}
+
+func DeleteSensorMongo(db *gorm.DB, dbm *mongo.Client, sensorName, deviceId string) {
+
+	collection := dbm.Database("siot").Collection(deviceId)
+
+	// delete documents that have only the sensor
+	sensors := SetSensorsToDelete(db, sensorName, deviceId)
+
+	// set filters to mongodb
+	var filter primitive.D
+	filter = append(filter, bson.E{sensorName, bson.D{{"$exists", true}}})
+
+	for i := 0; i < len(sensors); i++ {
+		filter = append(filter, bson.E{sensors[i], bson.D{{"$exists", false}}})
+	}
+
+	_, _ = collection.DeleteMany(context.Background(), filter)
+
+	// delete key of documents that have more than one sensor
+	var filter_sensor_exists primitive.D
+
+	filter_sensor_exists = append(filter_sensor_exists, bson.E{sensorName, bson.D{{"$exists", true}}})
+
+	update := bson.M{"$unset": bson.M{sensorName: true}}
+
+	_, _ = collection.UpdateMany(context.Background(), filter_sensor_exists, update)
+}
+
+func SetSensorsToDelete(db *gorm.DB, sensorName, deviceId string) []string {
+
+	// convert device id to uuid
+	did_uuid, _ := uuid.Parse(deviceId)
+
+	// device sensors
+	device := Device{}
+	deviceSensors, _ := device.FindDevice(db, did_uuid)
+
+	// final array of sensors
+	var sensors []string
+
+	for i := 0; i < len(deviceSensors.Sensors); i++ {
+		if deviceSensors.Sensors[i].Name != sensorName {
+			sensors = append(sensors, deviceSensors.Sensors[i].Name)
+		}
+	}
+
+	return sensors
+}
+
+func (s *Sensor) DeleteSensor(dbm *mongo.Client, db *gorm.DB, sensor_id string) error {
+
+	sensor, _ := s.GetSensor(db, sensor_id)
 
 	var err error = db.Where("id = ?", sensor_id).Delete(&Sensor{}).Error
 
 	if err != nil {
 		return err
 	}
+
+	go DeleteSensorMongo(db, dbm, sensor.Name, sensor.DeviceID.String())
+
 	return nil
 }
